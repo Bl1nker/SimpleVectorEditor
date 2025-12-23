@@ -1,0 +1,45 @@
+﻿<Window x:Class="VectorEditor.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:VectorEditor"
+        mc:Ignorable="d"
+        Title="Векторный редактор" 
+        Height="700" 
+        Width="1000" 
+        MinHeight="700" 
+        MinWidth="1000"
+        PreviewKeyDown="Window_PreviewKeyDown">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="200"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <StackPanel Grid.Column="0" Margin="10">
+            <Button Content="Новая линия" Click="BtnNewPolyline_Click" Margin="5" Focusable="False"/>
+            <Button Content="Удалить выделенное" Click="BtnDelete_Click" Margin="5" Focusable="False"/>
+            <Button Content="Удалить все" Click="BtnDeleteAll_Click" Margin="5" Focusable="False"/>
+            <Button Content="Сохранить" Click="BtnSave_Click" Margin="5" Focusable="False"/>
+            <Button Content="Загрузить" Click="BtnOpen_Click" Margin="5" Focusable="False"/>
+
+            <TextBlock Text="Цвет:" Margin="5,15,5,5"/>
+            <ComboBox x:Name="CbColor" SelectedIndex="0" Margin="5">
+                <ComboBoxItem Content="Black"/>
+                <ComboBoxItem Content="Red"/>
+                <ComboBoxItem Content="Blue"/>
+                <ComboBoxItem Content="Green"/>
+            </ComboBox>
+
+            <TextBlock Text="Толщина:" Margin="5,15,5,5"/>
+            <Slider x:Name="SliderThickness" Minimum="1" Maximum="10" Value="2" TickFrequency="1" IsSnapToTickEnabled="True" Margin="5"/>
+        </StackPanel>
+
+        <Canvas x:Name="DrawingCanvas" Grid.Column="1" Background="White"
+                MouseLeftButtonDown="DrawingCanvas_MouseLeftBtnDown"
+                MouseRightButtonDown="DrawingCanvas_MouseRightBtnDown"
+                MouseMove="DrawingCanvas_MouseMove"
+                MouseLeftButtonUp="DrawingCanvas_MouseLeftBtnUp"/>
+    </Grid>
+</Window>
