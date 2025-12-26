@@ -36,10 +36,17 @@
             <Slider x:Name="SliderThickness" Minimum="1" Maximum="10" Value="2" TickFrequency="1" IsSnapToTickEnabled="True" Margin="5"/>
         </StackPanel>
 
-        <Canvas x:Name="DrawingCanvas" Grid.Column="1" Background="White"
-                MouseLeftButtonDown="DrawingCanvas_MouseLeftBtnDown"
-                MouseRightButtonDown="DrawingCanvas_MouseRightBtnDown"
-                MouseMove="DrawingCanvas_MouseMove"
-                MouseLeftButtonUp="DrawingCanvas_MouseLeftBtnUp"/>
+        <Border Grid.Column="1"
+                BorderBrush="Gray"
+                BorderThickness="1"
+                Margin="5">
+            <Canvas x:Name="DrawingCanvas" 
+                    Background="White"
+                    ClipToBounds="True"
+                    MouseLeftButtonDown="DrawingCanvas_MouseLeftBtnDown"
+                    MouseRightButtonDown="DrawingCanvas_MouseRightBtnDown"
+                    MouseMove="DrawingCanvas_MouseMove"
+                    MouseLeftButtonUp="DrawingCanvas_MouseLeftBtnUp"/>
+        </Border>
     </Grid>
 </Window>

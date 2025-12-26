@@ -3,26 +3,36 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using VectorEditor.Models;
-using VectorEditor.Helpers;
 
 namespace VectorEditor.Rendering;
 
 public class VisualRenderer
 {
     private readonly Canvas _canvas;
-    public List<Polyline> UIPolylines { get; set; } = new();
-    public List<Ellipse> Handles { get; set; } = new();
+    private readonly DrawingModel _drawing;
+    public List<Polyline> UILines { get; set; } = new();
+    public List<Ellipse> Nodes { get; set; } = new();
 
-    public VisualRenderer(Canvas canvas)
+    public VisualRenderer(Canvas canvas, DrawingModel drawing)
     {
-        _canvas = canvas;
+        _canvas = canvas;        
+        _drawing = drawing;
     }
 
     public void ClearAll()
     {
         _canvas.Children.Clear();
-        UIPolylines.Clear();
-        Handles.Clear();
+        UILines.Clear();
+        Nodes.Clear();
+    }
+
+    public void RefreshDrawing(DrawingModel drawingModel, PolylineModel? selectedModel)
+    {
+        Redraw(drawingModel);
+        if (selectedModel != null)
+        {
+            ShowHandlesFor(selectedModel);
+        }
     }
 
     public void Redraw(DrawingModel model)
@@ -31,7 +41,7 @@ public class VisualRenderer
 
         foreach (var m in model.Polylines)
         {
-            var polyline = new Polyline
+            var line = new Polyline
             {
                 Stroke = new SolidColorBrush((Color)ColorConverter.ConvertFromString(m.Color)),
                 StrokeThickness = m.Thickness,
@@ -40,11 +50,11 @@ public class VisualRenderer
 
             foreach (var p in m.Points)
             {
-                polyline.Points.Add(p);
+                line.Points.Add(p);
             }
 
-            _canvas.Children.Add(polyline);
-            UIPolylines.Add(polyline);
+            _canvas.Children.Add(line);
+            UILines.Add(line);
         }
     }
 
@@ -54,7 +64,7 @@ public class VisualRenderer
 
         foreach (var p in model.Points)
         {
-            var handle = new Ellipse
+            var node = new Ellipse
             {
                 Width = 8,
                 Height = 8,
@@ -63,27 +73,27 @@ public class VisualRenderer
                 StrokeThickness = 1
             };
 
-            Canvas.SetLeft(handle, p.X - 4);
-            Canvas.SetTop(handle, p.Y - 4);
-            _canvas.Children.Add(handle);
-            Handles.Add(handle);
+            Canvas.SetLeft(node, p.X - 4);
+            Canvas.SetTop(node, p.Y - 4);
+            _canvas.Children.Add(node);
+            Nodes.Add(node);
         }
     }
 
     public void ClearHandles()
     {
-        foreach (var h in Handles)
+        foreach (var h in Nodes)
         {
             _canvas.Children.Remove(h);
         }
-        Handles.Clear();
+        Nodes.Clear();
     }
 
-    public Polyline? GetPolylineAt(Point pt, double tolerance = 10.0)
+    public Polyline? GetLineAt(Point pt, double tolerance = 10.0)
     {
-        foreach (var pl in UIPolylines)
+        foreach (var pl in UILines)
         {
-            if (GeometryHelper.IsPointOnPolyline(pl.Points, pt, tolerance))
+            if (Helpers.Geometry.IsPointOnPolyline(pl.Points, pt, tolerance))
             {
                 return pl;
             }
@@ -91,9 +101,9 @@ public class VisualRenderer
         return null;
     }
 
-    public Ellipse? GetHandleAt(Point pt)
+    public Ellipse? GetNodeAt(Point pt)
     {
-        foreach (var h in Handles)
+        foreach (var h in Nodes)
         {
             var left = Canvas.GetLeft(h);
             var top = Canvas.GetTop(h);
@@ -104,5 +114,25 @@ public class VisualRenderer
         return null;
     }
 
-    public int GetHandleIndex(Ellipse handle) => Handles.IndexOf(handle);
+    public int GetNodeIndex(Ellipse handle) => Nodes.IndexOf(handle);
+
+    public void SetDrawingModel(DrawingModel model)
+    {
+        if (model == null) 
+            return;
+
+        _drawing.Polylines.Clear();
+
+        foreach (var line in model.Polylines)
+        {
+            _drawing.Polylines.Add(new PolylineModel
+            {
+                Points = new List<Point>(line.Points),
+                Color = line.Color,
+                Thickness = line.Thickness,
+            });
+        }
+
+        Redraw(_drawing);
+    }
 }

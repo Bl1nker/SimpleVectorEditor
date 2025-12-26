@@ -3,19 +3,19 @@ using System.Windows.Controls;
 
 namespace VectorEditor.Services;
 
-public class PropertyPanelSyncService
+public class PropertyPanelSync
 {
-    private readonly PolylineInteractionService _interactionService;
+    private readonly Polyline _polyline;
     private readonly ComboBox _colorCombobox;
     private readonly Slider _thicknessSlider;
 
-    public PropertyPanelSyncService(PolylineInteractionService interactionService, ComboBox colorCombobox, Slider thicknessSlider)
+    public PropertyPanelSync(Polyline polyline, ComboBox colorCombobox, Slider thicknessSlider)
     {
-        _interactionService = interactionService;
+        _polyline = polyline;
         _colorCombobox = colorCombobox;
         _thicknessSlider = thicknessSlider;
 
-        _interactionService.SelectedLineChanged += SyncPanelWithSelection;
+        _polyline.SelectedLineChanged += SyncPanelWithSelection;
 
         _colorCombobox.SelectionChanged += OnColorChanged;
         _thicknessSlider.ValueChanged += OnThicknessChanged;
@@ -23,13 +23,13 @@ public class PropertyPanelSyncService
 
     private void SyncPanelWithSelection()
     {
-        bool hasSelection = _interactionService.SelectedModel != null;
+        bool hasSelection = _polyline.SelectedModel != null;
         _colorCombobox.IsEditable = hasSelection;
         _thicknessSlider.IsEnabled = hasSelection;
 
         if (hasSelection)
         {
-            var (color, thickness) = _interactionService.GetSelectedLineProperties();
+            var (color, thickness) = _polyline.GetSelectedPolylineProperties();
 
             var item = _colorCombobox.Items.Cast<ComboBoxItem>().FirstOrDefault(i => i.Content.ToString() == color);
 
@@ -50,19 +50,19 @@ public class PropertyPanelSyncService
 
     private void OnColorChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (_interactionService.SelectedModel != null && _colorCombobox.SelectedItem is ComboBoxItem item)
+        if (_polyline.SelectedModel != null && _colorCombobox.SelectedItem is ComboBoxItem item)
         {
             string color = item.Content.ToString() ?? "Black";
-            _interactionService.UpdateSelectedLineColor(color);
+            _polyline.UpdateSelectedPolylineColor(color);
 
         }
     }
 
     private void OnThicknessChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
-        if (_interactionService.SelectedModel != null)
+        if (_polyline.SelectedModel != null)
         {
-            _interactionService.UpdateSelectedLineThickness(e.NewValue);
+            _polyline.UpdateSelectedPolylineThickness(e.NewValue);
         }
     }
 }

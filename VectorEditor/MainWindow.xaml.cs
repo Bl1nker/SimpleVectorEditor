@@ -1,7 +1,6 @@
 ﻿using System.Windows;
 using System.Windows.Input;
 using System.Windows.Controls;
-using Microsoft.Win32;
 using VectorEditor.Models;
 using VectorEditor.Rendering;
 using VectorEditor.Services;
@@ -13,31 +12,42 @@ public partial class MainWindow : Window
 {
     private readonly DrawingModel _drawing = new();
     private readonly VisualRenderer _renderer;
-    private readonly PolylineInteractionService _interactionService;
-    private readonly InputHandlerService _inputHandler;
-    private readonly PropertyPanelSyncService _propertyPanelSync;
-    private readonly DrawingPersistenceService _persistenceService;
+    private readonly Polyline _polyline;
+    private readonly InputHandler _inputHandler;
+    private readonly PropertyPanelSync _propertyPanelSync;
+    private readonly DrawingPersistence _persistence;
 
     public MainWindow()
     {
         InitializeComponent();
 
-        _renderer = new VisualRenderer(DrawingCanvas);
-        _interactionService = new PolylineInteractionService(_drawing, DrawingCanvas, _renderer);
-        _persistenceService = new DrawingPersistenceService(GetSaveFilePath, GetOpenFilePath);
-
-        _inputHandler = new InputHandlerService(
-            _interactionService,
-            _persistenceService,
+        _renderer = new VisualRenderer(
+            DrawingCanvas,            
+            _drawing
+            );
+        _polyline = new Polyline(
+            _drawing, 
+            DrawingCanvas, 
             _renderer,
-            DrawingCanvas,
             GetCurrentColor,
             GetCurrentThickness
             );
 
+        _persistence = new DrawingPersistence(
+            _polyline,
+            _renderer
+            );
+
+        _inputHandler = new InputHandler(
+            _polyline,
+            _persistence,
+            _renderer,
+            _drawing
+            );
+
         DrawingCanvas.Focus();
 
-        _propertyPanelSync = new PropertyPanelSyncService(_interactionService, CbColor, SliderThickness);
+        _propertyPanelSync = new PropertyPanelSync(_polyline, CbColor, SliderThickness);
 
     }
 
@@ -46,69 +56,53 @@ public partial class MainWindow : Window
 
     private double GetCurrentThickness() => SliderThickness.Value;
 
-    private string? GetSaveFilePath()
-    {
-        var dlg = new SaveFileDialog { Filter = "JSON files (*.json)|*.json" };
-        return dlg.ShowDialog() == true ? dlg.FileName : null;
-    }
-
-    private string? GetOpenFilePath()
-    {
-        var dlg = new OpenFileDialog { Filter = "JSON files (*.json)|*.json" };
-        return dlg.ShowDialog() == true ? dlg.FileName : null;
-    }
-
     // Маршрутизация событий
     private void BtnNewPolyline_Click(object sender, RoutedEventArgs e)
     {
-        _interactionService.StartNewPolyline();
-        Mouse.OverrideCursor = Cursors.Cross;
+        _polyline.StartNewPolyline();        
     }
 
     private void BtnDelete_Click(object sender, RoutedEventArgs e)
     {
-        _interactionService.DeleteSelected();
+        _polyline.DeleteSelected();
     }
 
     private void BtnDeleteAll_Click(object sender, RoutedEventArgs e)
     {
-        _interactionService.DeleteAll();
+        _polyline.DeleteAll();
     }
 
     private void BtnSave_Click(object sender, RoutedEventArgs e)
     {
-        _persistenceService.SaveToFile(_drawing);
+        _persistence.SaveToFile(_drawing);
     }
 
     private void BtnOpen_Click(object sender, RoutedEventArgs e)
     {
-        var model = _persistenceService.LoadFromFile();
-        _interactionService.SetDrawingModel(model);
-        _renderer.Redraw(model);
-        _interactionService.ClearSelection();
+        _persistence.LoadFromFile();        
     }
 
     private void DrawingCanvas_MouseLeftBtnDown(object sender, MouseButtonEventArgs e)
     {
         var pt = e.GetPosition(DrawingCanvas);
-        _interactionService.HandleLeftMouseDown(pt);
+        _inputHandler.HandleLeftMouseDown(pt);
     }
 
     private void DrawingCanvas_MouseRightBtnDown(object sender, MouseButtonEventArgs e)
     {
-        _interactionService.HandleMouseRightBtnDown(GetCurrentColor(), GetCurrentThickness(), e);
+        _inputHandler.HandleMouseRightBtnDown(e);
     }
 
     private void DrawingCanvas_MouseMove(object sender, MouseEventArgs e)
     {
         var pt = e.GetPosition(DrawingCanvas);
-        _interactionService.HandleMouseMove(pt, e.LeftButton == MouseButtonState.Pressed);
+        _inputHandler.HandleMouseMove(pt, e.LeftButton == MouseButtonState.Pressed);
     }
 
     private void DrawingCanvas_MouseLeftBtnUp(object sender, MouseButtonEventArgs e)
     {
         var pt = e.GetPosition(DrawingCanvas);
-        _interactionService.HandleMouseUp(pt);
+        _inputHandler.HandleMouseUp(pt);
     }
 
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e)

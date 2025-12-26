@@ -2,7 +2,7 @@
 
 namespace VectorEditor.Helpers;
 
-public static class GeometryHelper
+public static class Geometry
 {
     public static double PointToSegmentDistance(Point p, Point a, Point b)
     {
