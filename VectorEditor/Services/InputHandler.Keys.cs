@@ -6,20 +6,17 @@ namespace VectorEditor.Services;
 
 partial class InputHandler
 {
-    private readonly Polyline _polyline;
-    private readonly DrawingPersistence _persistence;
+    private readonly ShapeInteraction _shape;
     private readonly VisualRenderer _renderer;
     private readonly DrawingModel _drawing;
 
     public InputHandler(
-        Polyline polyline,
-        DrawingPersistence persistence,
+        ShapeInteraction shape,
         VisualRenderer renderer,
         DrawingModel drawing
         )
     {
-        _polyline = polyline;
-        _persistence = persistence;
+        _shape = shape;
         _renderer = renderer;
         _drawing = drawing;
     }
@@ -27,11 +24,11 @@ partial class InputHandler
     // Завершение рисования 
     public void HandlePreviewKeyDown(KeyEventArgs e)
     {
-        if (_polyline.IsDrawingNew)
+        if (_shape.IsDrawingNewPolyline)
         {
             if (e.Key == Key.Enter || e.Key == Key.Space)
             {
-                _polyline.TryFinishNewPolyline();
+                _shape.TryFinishNewPolyline();
                 e.Handled = true;
                 return;
             }
@@ -39,7 +36,7 @@ partial class InputHandler
 
         if (e.Key == Key.Delete)
         {
-            _polyline.DeleteSelected();
+            _shape.DeleteSelected();
             e.Handled = true;
             return;
         }
@@ -50,18 +47,22 @@ partial class InputHandler
     {
         if (e.Key == Key.S && Keyboard.Modifiers == ModifierKeys.Control)
         {
-            if (_polyline.IsDrawingNew)
+            if (_shape.IsDrawingNewPolyline)
             {
-                _polyline.TryFinishNewPolyline();
+                _shape.TryFinishNewPolyline();
             }
 
-            _persistence.SaveToFile(_polyline.DrawingModel);
+            DrawingPersistence.SaveToFile(_shape.DrawingModel);
 
             e.Handled = true;
         }
         else if (e.Key == Key.O && Keyboard.Modifiers == ModifierKeys.Control)
         {
-            _persistence.LoadFromFile();
+            _shape.ClearSelection();
+
+            var model = DrawingPersistence.LoadFromFile();
+
+            _renderer.SetDrawingModel(model);
 
             e.Handled = true;
         }

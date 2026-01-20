@@ -1,54 +1,50 @@
 ﻿using Microsoft.Win32;
+using Newtonsoft.Json;
 using System.IO;
-using System.Text.Json;
 using System.Windows;
 using VectorEditor.Models;
-using VectorEditor.Rendering;
 
 namespace VectorEditor.Services;
 
-public class DrawingPersistence
+public static class DrawingPersistence
 {
-    private readonly Polyline _polyline;
-    private readonly VisualRenderer _renderer;
-
-    public DrawingPersistence(Polyline polyline, VisualRenderer renderer)
-    {
-        _polyline = polyline;
-        _renderer = renderer;
-    }
-
-    public void LoadFromFile()
+    public static DrawingModel? LoadFromFile()
     {
         var dlg = new OpenFileDialog { Filter = "JSON files (*.json)|*.json" };
+        DrawingModel model;
 
         if (dlg.ShowDialog() == true)
         {
             try
             {
                 var json = File.ReadAllText(dlg.FileName);
-                DrawingModel model = JsonSerializer.Deserialize<DrawingModel>(json) ?? new DrawingModel();
+                model = JsonConvert.DeserializeObject<DrawingModel>(json, _settings) ?? new DrawingModel();
 
-                _renderer.SetDrawingModel(model);
-
-                _polyline.ClearSelection();
+                return model;
             }
             catch (IOException exc)
             {
                 MessageBox.Show("Не удалось прочитать файл: " + exc.Message);
-                return;
             }
         }
+
+        return null;
     }
 
-    public void SaveToFile(DrawingModel model)
+    public static void SaveToFile(DrawingModel model)
     {
         var dlg = new SaveFileDialog { Filter = "JSON files (*.json)|*.json" };
         if (dlg.ShowDialog() == true)
-        {
-            var options = new JsonSerializerOptions { WriteIndented = true };
-            var json = JsonSerializer.Serialize(model, options);
+        {            
+            var json = JsonConvert.SerializeObject(model, _settings);
             File.WriteAllText(dlg.FileName, json);
-        }        
+        }
     }
+
+    private static readonly JsonSerializerSettings _settings = new()
+    {
+        Formatting = Formatting.Indented,
+        TypeNameHandling = TypeNameHandling.Auto,
+        NullValueHandling = NullValueHandling.Ignore        
+    };
 }

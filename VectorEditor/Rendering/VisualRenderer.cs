@@ -10,23 +10,24 @@ public class VisualRenderer
 {
     private readonly Canvas _canvas;
     private readonly DrawingModel _drawing;
-    public List<Polyline> UILines { get; set; } = new();
+    public List<Shape> UIShapes { get; set; } = new();
+
     public List<Ellipse> Nodes { get; set; } = new();
 
     public VisualRenderer(Canvas canvas, DrawingModel drawing)
     {
-        _canvas = canvas;        
+        _canvas = canvas;
         _drawing = drawing;
     }
 
     public void ClearAll()
     {
         _canvas.Children.Clear();
-        UILines.Clear();
+        UIShapes.Clear();
         Nodes.Clear();
     }
 
-    public void RefreshDrawing(DrawingModel drawingModel, PolylineModel? selectedModel)
+    public void RefreshDrawing(DrawingModel drawingModel, VectorEditor.Models.ShapeModel? selectedModel)
     {
         Redraw(drawingModel);
         if (selectedModel != null)
@@ -39,44 +40,40 @@ public class VisualRenderer
     {
         ClearAll();
 
-        foreach (var m in model.Polylines)
+        foreach (var elem in model.Elements)
         {
-            var line = new Polyline
+            if (elem is PolylineModel pline)
             {
-                Stroke = new SolidColorBrush((Color)ColorConverter.ConvertFromString(m.Color)),
-                StrokeThickness = m.Thickness,
-                Fill = Brushes.Transparent
-            };
-
-            foreach (var p in m.Points)
-            {
-                line.Points.Add(p);
+                RedrawPolyline(pline);
+                continue;
             }
 
-            _canvas.Children.Add(line);
-            UILines.Add(line);
+            // Другие формы
         }
     }
 
-    public void ShowHandlesFor(PolylineModel model)
+    public void ShowHandlesFor(ShapeModel model)
     {
         ClearHandles();
 
-        foreach (var p in model.Points)
+        if (model is PolylineModel pline)
         {
-            var node = new Ellipse
+            foreach (var p in pline.Points)
             {
-                Width = 8,
-                Height = 8,
-                Fill = Brushes.White,
-                Stroke = Brushes.Blue,
-                StrokeThickness = 1
-            };
+                var node = new Ellipse
+                {
+                    Width = 8,
+                    Height = 8,
+                    Fill = Brushes.White,
+                    Stroke = Brushes.Blue,
+                    StrokeThickness = 1
+                };
 
-            Canvas.SetLeft(node, p.X - 4);
-            Canvas.SetTop(node, p.Y - 4);
-            _canvas.Children.Add(node);
-            Nodes.Add(node);
+                Canvas.SetLeft(node, p.X - 4);
+                Canvas.SetTop(node, p.Y - 4);
+                _canvas.Children.Add(node);
+                Nodes.Add(node);
+            }
         }
     }
 
@@ -89,13 +86,13 @@ public class VisualRenderer
         Nodes.Clear();
     }
 
-    public Polyline? GetLineAt(Point pt, double tolerance = 10.0)
+    public Shape? GetElementAt(Point pt, double tolerance = 10.0)
     {
-        foreach (var pl in UILines)
+        foreach (var obj in UIShapes)
         {
-            if (Helpers.Geometry.IsPointOnPolyline(pl.Points, pt, tolerance))
+            if (Helpers.Geometry.IsPointOnShape(obj, pt, tolerance))
             {
-                return pl;
+                return obj;
             }
         }
         return null;
@@ -108,7 +105,7 @@ public class VisualRenderer
             var left = Canvas.GetLeft(h);
             var top = Canvas.GetTop(h);
             var rect = new Rect(left, top, h.Width, h.Height);
-            if (rect.Contains(pt)) 
+            if (rect.Contains(pt))
                 return h;
         }
         return null;
@@ -116,23 +113,44 @@ public class VisualRenderer
 
     public int GetNodeIndex(Ellipse handle) => Nodes.IndexOf(handle);
 
-    public void SetDrawingModel(DrawingModel model)
+    public void SetDrawingModel(DrawingModel? model)
     {
-        if (model == null) 
+        if (model == null)
             return;
 
-        _drawing.Polylines.Clear();
+        _drawing.Elements.Clear();
 
-        foreach (var line in model.Polylines)
+        foreach (var obj in model.Elements)
         {
-            _drawing.Polylines.Add(new PolylineModel
+            if (obj is PolylineModel pline)
             {
-                Points = new List<Point>(line.Points),
-                Color = line.Color,
-                Thickness = line.Thickness,
-            });
+                _drawing.Elements.Add(new PolylineModel
+                {
+                    Points = new List<Point>(pline.Points),
+                    Color = pline.Color,
+                    Thickness = pline.Thickness,
+                });
+            }
         }
 
         Redraw(_drawing);
+    }
+
+    private void RedrawPolyline(PolylineModel obj)
+    {
+        var line = new Polyline
+        {
+            Stroke = new SolidColorBrush((Color)ColorConverter.ConvertFromString(obj.Color)),
+            StrokeThickness = obj.Thickness,
+            Fill = Brushes.Transparent
+        };
+
+        foreach (var p in obj.Points)
+        {
+            line.Points.Add(p);
+        }
+
+        _canvas.Children.Add(line);
+        UIShapes.Add(line);
     }
 }

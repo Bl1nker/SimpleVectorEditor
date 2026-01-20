@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using System.Windows.Shapes;
 
 namespace VectorEditor.Helpers;
 
@@ -23,6 +24,14 @@ public static class Geometry
         return (closest - p).Length;
     }
 
+    public static bool IsPointOnShape(Shape shape, Point pt, double tolerance = 10.0)
+    {
+        return shape switch
+        {
+            Polyline polyline => IsPointOnPolyline(polyline.Points, pt, tolerance),
+            _ => false
+        };
+    }
     public static bool IsPointOnPolyline(System.Windows.Media.PointCollection points, Point pt, double tolerance = 10.0)
     {
         for (int i = 1; i < points.Count; i++)

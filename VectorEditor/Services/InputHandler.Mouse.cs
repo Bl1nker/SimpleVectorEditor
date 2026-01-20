@@ -1,12 +1,12 @@
 ﻿using System.Windows;
 using System.Windows.Input;
-using System.Windows.Media;
+using VectorEditor.Models;
 
 namespace VectorEditor.Services;
 
 partial class InputHandler
 {
-    // Для определения двойного щелчка
+    // Для определения двойного клика
     private DateTime _lastClickTime = DateTime.MinValue;
     private Point _lastClickPosition;
     private const double MaxDoubleClickTime = 400; // ms
@@ -32,48 +32,53 @@ partial class InputHandler
         }
 
         // Обработка одинарного клика
-        if (_polyline.draggedLineNodeIndex >= 0)
+        if (_shape.draggedShapeNodeIndex >= 0)
             return;
 
         //Рисуем новую линию
-        if (_polyline.IsDrawingNew)
+        if (_shape.IsDrawingNewPolyline)
         {
-            _polyline.AddPointToPolyline(pt);            
+            _shape.AddPointToPolyline(pt);
             return;
         }
 
         //Проверка клик по узлу
         var clickedNode = _renderer.GetNodeAt(pt);
-        if (clickedNode != null && _polyline.SelectedModel != null)
+        if (clickedNode != null)
         {
-            var nodeIndex = _renderer.GetNodeIndex(clickedNode);
-            var polylineIndex = _drawing.Polylines.IndexOf(_polyline.SelectedModel);
-
-            if (polylineIndex >= 0 && nodeIndex >= 0 && nodeIndex < _polyline.SelectedModel.Points.Count)
+            if (_shape.SelectedModel is PolylineModel pline)
             {
-                _polyline.draggedLineNodeIndex = polylineIndex;
-                _polyline.draggedPointIndex = nodeIndex;
-                _polyline.dragNodeOffset = pt - _polyline.SelectedModel.Points[nodeIndex];
-                return;
+                var nodeIndex = _renderer.GetNodeIndex(clickedNode);
+                var polylineIndex = _drawing.Elements.IndexOf(pline);
+
+                if (polylineIndex >= 0 && nodeIndex >= 0 && nodeIndex < pline.Points.Count)
+                {
+                    _shape.draggedShapeNodeIndex = polylineIndex;
+                    _shape.draggedPointIndex = nodeIndex;
+                    _shape.dragNodeOffset = pt - pline.Points[nodeIndex];
+                    return;
+                }
             }
         }
 
-        //Проверка клик по линии
-        var clickedLine = _renderer.GetLineAt(pt);
-        if (clickedLine != null)
+        //Проверка клик по объекту
+        var clickedObject = _renderer.GetElementAt(pt);
+        if (clickedObject != null)
         {
             if (clickedNode == null)
             {
-                var polylineIndex = _renderer.UILines.IndexOf(clickedLine);
-                if (polylineIndex >= 0 && polylineIndex < _drawing.Polylines.Count)
+                var objectIndex = _renderer.UIShapes.IndexOf(clickedObject);
+
+                if (objectIndex >= 0 && objectIndex < _drawing.Elements.Count)
                 {
-                    var model = _drawing.Polylines[polylineIndex];
-                    if (model.Points.Count > 0)
+                    var model = _drawing.Elements[objectIndex];
+
+                    if (model is PolylineModel line && line.Points.Count > 0)
                     {
-                        var referencePoint = model.Points[0];
-                        _polyline.draggedPolylineIndex = polylineIndex;
-                        _polyline.dragPolylineOffset = pt - referencePoint;
-                        _polyline.SelectPolyline(clickedLine);
+                        var referencePoint = line.Points[0];
+                        _shape.draggedShapeIndex = objectIndex;
+                        _shape.dragShapeOffset = pt - referencePoint;
+                        _shape.SelectObject(clickedObject);
                         return;
                     }
                 }
@@ -85,14 +90,14 @@ partial class InputHandler
         }
 
         //Клик на пустом месте
-        _polyline.ClearSelection();
+        _shape.ClearSelection();
     }
 
     public void HandleMouseRightBtnDown(MouseButtonEventArgs e)
     {
-        if (_polyline.IsDrawingNew)
+        if (_shape.IsDrawingNewPolyline)
         {
-            _polyline.TryFinishNewPolyline();
+            _shape.TryFinishNewPolyline();
             e.Handled = true;
         }
     }
@@ -100,47 +105,47 @@ partial class InputHandler
     public void HandleMouseMove(Point pt, bool isLeftPressed)
     {
         // Перетаскивание узла
-        if (_polyline.draggedLineNodeIndex >= 0 && _polyline.draggedPointIndex >= 0 && isLeftPressed && _polyline.dragNodeOffset.HasValue)
+        if (_shape.draggedShapeNodeIndex >= 0 && _shape.draggedPointIndex >= 0 && isLeftPressed && _shape.dragNodeOffset.HasValue)
         {
-            _polyline.NodeMove(pt, _polyline.draggedLineNodeIndex, _polyline.draggedPointIndex, _polyline.dragNodeOffset);
+            _shape.NodeMove(pt);
             return;
         }
 
-        // Перетаскивание всей линии
-        if (_polyline.draggedPolylineIndex >= 0 && isLeftPressed && _polyline.dragPolylineOffset.HasValue)
+        // Перетаскивание всего объекта
+        if (_shape.draggedShapeIndex >= 0 && isLeftPressed && _shape.dragShapeOffset.HasValue)
         {
-            _polyline.LineMove(pt, _polyline.draggedPolylineIndex, _polyline.dragPolylineOffset);
-            return;
+            if (_shape.SelectedModel is PolylineModel)
+            {
+                _shape.LineMove(pt);
+                return;
+            }
         }
-        // Рисование временной линии
-        if (_polyline.IsDrawingNew && isLeftPressed && _polyline.currentPoints.Count > 0)
+        // Рисование временной полилинии
+        if (_shape.IsDrawingNewPolyline && isLeftPressed && _shape.currentPoints.Count > 0)
         {
-            _polyline.TempPolyline(pt);
+            _shape.TempPolyline(pt);
             return;
         }
     }
 
-    public void HandleMouseUp(Point pt)
+    public void HandleMouseUp()
     {
-        _polyline.draggedLineNodeIndex = -1;
-        _polyline.draggedPointIndex = -1;
-        _polyline.dragNodeOffset = null;
+        _shape.draggedShapeNodeIndex = -1;
+        _shape.draggedPointIndex = -1;
+        _shape.dragNodeOffset = null;
 
-        _polyline.draggedPolylineIndex = -1;
-        _polyline.dragPolylineOffset = null;
+        _shape.draggedShapeIndex = -1;
+        _shape.dragShapeOffset = null;
     }
 
     private void HandleDoubleClick(Point pt)
     {
-        if (_polyline.SelectedModel == null)
+        if (_shape.SelectedModel == null)
             return;
 
-        var result = Helpers.Geometry.FindNearestSegmentInsertion(new PointCollection(_polyline.SelectedModel.Points), pt);
-
-        if (result.HasValue)
+        if (_shape.SelectedModel is PolylineModel)
         {
-            _polyline.AddNewNode(result.Value.segmentIndex, result.Value.projection);
-            
+            _shape.AddNewNode(pt);
         }
     }
 }
